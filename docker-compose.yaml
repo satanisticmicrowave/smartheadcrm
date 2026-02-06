@@ -1,0 +1,68 @@
+## Author: satanisticmicrowave
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: env/php/Dockerfile
+    container_name: smartheadcrm-app
+    restart: unless-stopped
+    working_dir: /var/www
+    environment:
+      - PHP_IDE_CONFIG=serverName=Docker
+    volumes:
+      - ./src:/var/www
+      - ./env/php/php.ini:/usr/local/etc/php/conf.d/custom.ini
+    networks:
+      - smartheadcrm-network
+    depends_on:
+      - mysql
+      - redis
+
+  webserver:
+    image: nginx:1.29.5-alpine
+    container_name: smartheadcrm-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./src:/var/www
+      - ./env/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - smartheadcrm-network
+    depends_on:
+      - app
+
+  mysql:
+    image: mysql:8.0
+    container_name: smartheadcrm-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: smartheadcrm
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: devel
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./env/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    networks:
+      - smartheadcrm-network
+
+  redis:
+    image: redis:alpine
+    container_name: crm_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - smartheadcrm-network
+
+volumes:
+  mysql_data:
+
+networks:
+  smartheadcrm-network:
+    driver: bridge
